@@ -1,0 +1,251 @@
+Where and Why ?
+
+- Starts in Airbnb 2014
+- Manage complex workflows
+- Open source
+- Top-level Aache project 2019
+- Workflow Management platform
+- Written in python
+
+What is Airflow ?
+
+( Workflow Automation tool )
+( Pipeline as a code )
+( Workflows/Pipelines mostly will be Extract, Transform, Load )
+
+Defination : Open Source platform to "schedule" and "monitor" workflows, allows user to "define" complex workflows as DAG programatically,
+
+Uses : Workflow Orchestration, Automation, Scheduling, Monitoring and Alerting, Version Control
+
+Alternatives : Cron Jobs(limited scripts, basic time-based scheduler), whereas Airflow is more flexible and provides
+                task dependancies, retries, and scheduling.
+
+Workflow : "Series of tasks that needs to be executed in specific order".
+           Workflow(pipeline) is defined using DAG(code)
+           node - tasks, edges - dependencies
+
+Pipeline : Pipeline is typically more specific term, often used in the context of data processing.
+           (series of process of Transformations that move data from one system to another)
+           In Airflow, a pipeline could be considered a specific type of workflow focused on data processing (ETL)
+
+Task : Execution unit in DAG
+       Implementation of an operator
+       Tasks are created using Operators(Functions provided by airflow like BashOperator(exec bash command),
+                                                                     PythonOperator(calls arbitrary python function),
+                                                                     SQLOperator(Runs SQL queries),
+                                                                     HTTPOperator(Makes HTTP requests),
+                                                                     EmailOperator(sends email) etc,....)
+
+Operators: Defines tasks
+           Determines what actually runs by the task
+
+Scheduler: Triggers tasks at the right time based on schedule_interval and dependancies
+
+DAG : DAG in airflow is a "collection of tasks that are represented in a way that defines their EXECUTION ORDER and dependencies".
+      each node in the graph represents a task, and the edges define the order in which tasks should be executed.
+      ( Directed -> Moves in one direction, Acyclic -> No loops, Graph -> Visual representation )
+      ( DAG is blueprint of workflow/pipeline shows how workflow runs and task are actual execution units )
+
+Executors : Determines how our tasks runs
+            (sequentail executor(sequentially), Local executor(locally on single machine), Celery executor(distributes tasks across many workers))
+
+Metadata Database: Stores dag run, task execution details. If corrupted, task execution fails, and task states may be lost.
+
+Workers: Where actual tasks runs
+
+DAG Code :- (Written in python)
+            from datetime import datetime, timedelta
+            from airflow import DAG
+
+            from airflow.operators.python import PythonOperator
+			from airflow.operators.bash import BashOperator
+            from airflow.operators.dummy import DummyOperator
+            from airflow.providers.apache.spark import SparkSubmitOperator
+
+        default_args={
+            'Owner': 'Credit-Lending',
+            'retries'=2,
+            'retry_delay'=timedelta(minutes=5)
+        }
+        
+        with DAG(
+            dag_id='simple_dag',
+            default_args=default_args,
+            description="simple dag example",
+            start_date=datetime(2021,7,4, 2),
+            schedule_interval='@daily',
+			catchup=True
+        ) as dag:
+        
+            def get_name(ti):
+                ti.xcom_push(key="name", value="fury")
+				# (or) return "fury"
+				
+        
+            def greet(ti, age, loc):
+                name=ti.xcom_pull(task_id="get_name", key="name")
+                print(f"my name is {name} age is {age} and location is {loc}")
+        
+            start_task=BashOperator(
+			       task_id="start", 
+			       bash_command="echo this is the start task"
+			)
+        
+            task1=PythonOperator(
+                task_id="task1",
+                python_callable=get_name
+            )
+        
+            python_task=PythonOperator(
+                task_id="python_task",
+                python_callable=greet,
+                op_kwargs={'age': 25, 'loc':'hyd'}
+            )
+
+           spark_task=SparkSubmitOperator(
+               task_id="Spark_task",
+               application=file.jar,
+               con={........}
+           )
+	       
+           end_task=DummyOperator(task_id="end", dag=dag)    
+	       
+           start_task.set_downstream(task1) >> [python_task, spark_task] >> end_task
+
+
+Questions:
+----------
+
+Q. Task Lifecycle ?
+A. 11 States
+   NO STATUS : Scheduler created empty task instances
+   Scheduler : Scheduler determined task instance needs to run ( Scheduled, removed, upstream_failed, skipped )
+   Executor : Scheduler sent task to executor to run on the queue ( Queued )
+   Worker : Worker picked up the task and now running ( Running ) up_for_reschedule
+   Success, Failed, shutdown, up for retry
+   
+Q. Arhcitrecture ?
+A. DE -> User Interface ( Web server ) -> Scheduler -> Executor -> Worker 
+                                    Metadata database 
+
+Q. Dynamic workflows ?
+A. Workflows are defined using python, allowing dynamic task creation by configuration, parameters without manual human intervention.
+   (pipeline.yml)
+   
+Q. Execution Date, Task Instance, Dag Run ?
+A. Execution Date: Logic date & time which dag run and it's task instances are running for
+   Dag run: Instantiation of dag on specific execution date
+   Task Instance: Specific execution of a task for a given DAG run
+
+Q. Task Scheduling ?
+A. Allows scheduling tasks with time-based triggers(cron-like) on Executors.
+
+Q. Real-Time ?
+A. Designed for batch processes, not real-time events.
+
+Q. How does Airflow handle retries ?
+A. Airflow allows task retries on failure, with configurable retry delays and limits.
+   retries, retry_delay, max_retry_delay
+
+Q. How does Airflow handle parallel execution ?
+A. By allowing multiple workers to execute tasks concurrently, based on the available resources. (concurrency, max_active_runs)
+
+Q. Hook in Airflow ?
+A. Interfaces to external systems(db, cloud services) used to perform operations like connecting and querying.
+
+Q. Airflow Scheduler ?
+A. Triggers tasks when their start time (or) dependencies are met and assigns them to executor for execution.
+
+Q. How do you scale Airflow for large workflows ?
+A. Use CeleryExecutor (or) KubernetesExecutor to distribute tasks across multiple workers.
+
+Q. How to manage task dependencies dynamically ?
+A. Use python code and operators like set_upstream(), set_downStream(), (or) >>, << to dynamically create task dependencies.
+
+Q. XComs in Airflow ?
+A. XComs allow tasks to exchange data by pushing and pulling values between tasks during DAG execution
+   By default, every function return value is pushed to Xcoms, Size of Xcom 48KB.
+
+Q. catchup parameter ?
+A. catchup/backfill controls whether Airflow dag runs missed dates from start_date. Set to False to avoid running backlogged dates.
+
+Q. SubDagOperator in Airflow ?
+A. Allows nesting a DAG within another, useful for organizing complex workflows.
+
+Q. How would you implement for real-time streaming (or) event-driven tasks ?
+A. Use sensors(which waits till condition mets like file in s3 or data in db) like FileSensor
+   (or) intergarte with systems like kafka (or) AWS lambda, but Airflow is more suited for batch processing.
+
+
+
+
+TaskFlow API:
+------------
+from airflow.decrorators import dag, task
+
+default_args = {
+'owner'='fury',
+'retries'=5,
+'retry_delay'=timedelta(minutes=4)
+}
+
+@dag(dag_id="simple_dag",
+     default_args=default_args,
+	 start_date=datetime(2025,7,2),
+	 schedule_interval='@daily'
+	 )
+def hello_world_etl():
+     @task(multiple_outputs=True)
+	 def get_name():
+	     return {fname:'fury',
+		 lname:'gani'}
+		  		  
+	 @task() 
+	 def get_age():
+	     return 25
+		 
+	 @task()
+	 def greet(fname, lname, age):
+	     print(f"Hello World! My name is {fname+lname} and age is {age} years old"}
+		 
+		 
+	name_dict=get_name()
+	age=get_age()
+	greet(fname=name_dict[fname], lname=name_dict[lname], age=age)
+	
+hello_world_etl()
+		 
+
+Cron Expression :
+--------------
+
+minute hour day(month) month day(week)
+
+None
+@once
+@hourly    - 0 * * * *
+@daily     - 0 0 * * *
+@weekly    - 0 0 * * 0     (Every sun)
+@monthly   - 0 0 1 * *     (1st day of month)
+@yearly    - 0 0 1 1 *     ( Jan 1 )
+
+
+
+eg: 5 4 * * Tue,Fri    (Tue & Fri)
+    5 4 * * Tue-Fri    (Tue to Fri)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

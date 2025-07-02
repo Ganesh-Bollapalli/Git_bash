@@ -1,0 +1,149 @@
+GitHub:-
+------
+
+What ?
+GitHub is a "web based platform that hosts git repositories and collaboration tools" for developers.
+
+Why ?
+Allows individuals and teams to store, manage and share code, as well as collaborate on software projects.
+
+How ?
+
+a) Repository --> Central location where files related to project are stored and managed
+   GitHub provide tools for version control(git), issue tracking, project management(jira) and collaboration within repositories
+   Types of repositories :- public, private
+
+b) Branches --> Parallel version of repository code base, containing its own set of changes and commits
+   Used to isolate development work from the main code base, allowing developers to work on features, bug fixes, or experiments without affecting main code
+
+-----------------------------------------------------------
+
+We can write git commands in :-
+CLI (gitbash)
+IDE (Intellij, Visual studio code)
+GUI (GitGUI)
+Scripts (shell scripts)
+
+-----------------------------------------------------------
+
+1st scenario
+
+=> start by creating a repository in github
+
+- git clone <repository_url>      # Clone the repository from github to local/ide
+- git status                      # Tracks modified and newly added files (Newly added - untracked files, Modified - not staged till git add filename)
+           *origin by convention means the remote from where we cloned*
+- git add .                       # Unstaged to Staged
+- git commit -m "message"
+- git push origin main            # Put it to main branch
+           *we need to have same main branch on github or else will create new separate main branch on github*
+
+2nd scenario
+
+=> You want to start the development on local
+
+- git init                        # So git should track and manage it
+- git status
+- git add .
+- git commit -m "message"
+- git remote add origin <repository_url>
+- git remote -v                   # See where origin points to
+- git push origin main            # Put it to main branch (our local branch name also should be main)
+- git push -u origin main         # Setting upstream (so from next time we can simply run git push)
+
+3rd scenario
+-------------
+=> branches in git
+
+- git branch                    # will show all the branches and on which branch we are, (see where head(*) points at)
+- git branch -M modified_name   # rename a branch we are on
+- git branch feature1           # creates a new branch and contains the code of the current branch we residing on
+- git checkout feature1         # checkout to feature1
+- git checkout -b feature2      # creates and checkouts to feature2 (Contains code of current branch we are on)
+- git checkout -b feature3 feature2  # creates and checkouts to feature2 takes base code of mentioned branch
+- git branch -d feature3        # deletes branch (while deleting we shouldn’t be on same branch)
+
+- git remote -v
+- git push origin feature1      # be on feature1 branch and pushing to feature1 on origin (will create feature1 on github)
+                                # Create PR, Get Approval, Merge it
+
+4th scenario
+-------------
+=> Our latest changes are in main branch of github, but not on local
+
+- git checkout main
+- git pull origin main          # pulls the main branch code of github to branch we residing on
+
+5th scenario
+-------------
+=> undo changes
+     
+	 *if made changes and staged them*
+- git add .
+- git status
+- git restore --staged filename   # unstage them (2 step process)
+- git restore filename            # undo changes now
+
+     *if made changes staged and committed also*
+- git add .
+- git commit -m "message"
+- git status
+- git log                         # shows commit history, with recent commit at top
+- git reset <hash_value>          # goes to that commit ***(where changes are unstaged, we have changes yet)***
+- git reset head~1                # goes 1 step back
+- git reset --hard <hash_value>   # Changes will be gone from local
+
+6th scenario
+-------------
+=> contribute to existing project  
+fork - get a copy of code from some other account to our account
+
+- git clone <repository_url>
+- git branch
+- git branch feature1
+- git checkout feature1
+  *do changes*
+- git add .
+- git commit -m "message"
+- git push origin feature1  
+  *these changes are pushed to my github, but not on original project*  
+  *It will raise PR, which goes to original project also*  
+  upstream - actual project  
+  origin   - my github account  
+  *original project person will review, approve and merge to their main branch*  
+  *Our code will be there in main branch of original project*  
+
+** feature1 in my github has latest code whereas main doesn’t same with local branch **
+
+- git remote add upstream <original_repository_url>
+- git remote -v
+- git checkout main                # get code from main branch of upstream to the branch I was on
+- git pull upstream main           # get code from main branch of upstream to the branch I was on
+- git push origin main             # push to main branch of my github account
+
+7th scenario
+-------------
+=> Park Changes Temporarily somewhere (Keep the changes in a place so we can later retrieve it)
+
+- git stash                        # park changes
+- git stash pop                    # get changes (whatever staged also will become unstaged)
+- git stash                        # park changes
+- git stash clear                  # clear changes/staged area
+- git stash list                   # list of stashes (if we change file1 stashed, and changed file2 and stashed)
+- git stash pop                    # last stashed we will get
+
+git revert <hash value>            # creates new commit that undoes the changes from the commit you specify
+
+git rebase <branch>                # move/rebase series of commits from one branch to other  
+  ***if u working on feature branch and someone changes main code in github***
+- git checkout feature
+- git fetch origin
+- git rebase origin/main
+"Take all my commits on feature and replay them on top of the latest version of main from remote(origin/main)"                  
+
+#Get code from remote main and merge into local feature1
+- git checkout feature1 
+- git fetch origin                 # Fetches changes from remote repo without merging them into your local branch
+- git merge origin/main            # Merges another branch into your current branch we are on
+
+- git pull origin main             # git fetch + git merge
